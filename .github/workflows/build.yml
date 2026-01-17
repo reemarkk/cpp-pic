@@ -1,4 +1,4 @@
-name: build + test (clang-20)
+name: build + test (clang-21)
 
 on:
   pull_request:
@@ -26,20 +26,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM/Clang 20 and Ninja
+      - name: Install LLVM/Clang 21 and Ninja
         shell: bash
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          sudo add-apt-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-20 main"
+          sudo add-apt-repository -y "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main"
           sudo apt-get update
-          sudo apt-get install -y clang-20 lld-20 llvm-20 ninja-build
-          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-20 100
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-20 100
-          sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-20 100
-          sudo update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-20 100
-          sudo update-alternatives --install /usr/bin/llvm-objdump llvm-objdump /usr/bin/llvm-objdump-20 100
-          sudo update-alternatives --install /usr/bin/llvm-objcopy llvm-objcopy /usr/bin/llvm-objcopy-20 100
-          sudo update-alternatives --install /usr/bin/llvm-strings llvm-strings /usr/bin/llvm-strings-20 100
+          sudo apt-get install -y clang-21 lld-21 llvm-21 ninja-build
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-21 100
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-21 100
+          sudo update-alternatives --install /usr/bin/lld lld /usr/bin/lld-21 100
+          sudo update-alternatives --install /usr/bin/ld.lld ld.lld /usr/bin/ld.lld-21 100
+          sudo update-alternatives --install /usr/bin/llvm-objdump llvm-objdump /usr/bin/llvm-objdump-21 100
+          sudo update-alternatives --install /usr/bin/llvm-objcopy llvm-objcopy /usr/bin/llvm-objcopy-21 100
+          sudo update-alternatives --install /usr/bin/llvm-strings llvm-strings /usr/bin/llvm-strings-21 100
           clang --version
           ninja --version
 
@@ -52,8 +52,8 @@ jobs:
       - name: Build (${{ matrix.target }})
         shell: bash
         env:
-          CC: clang-20
-          CXX: clang++-20
+          CC: clang-21
+          CXX: clang++-21
         run: |
           target="${{ matrix.target }}"
           arch="${target%-*}"
@@ -159,7 +159,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM 20.x and Ninja
+      - name: Install LLVM 21.x and Ninja
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -169,7 +169,7 @@ jobs:
           ninja --version
 
           # Install LLVM
-          $ver = "20.1.0"
+          $ver = "21.1.6"
           $exe = "LLVM-$ver-win64.exe"
           $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-$ver/$exe"
 
