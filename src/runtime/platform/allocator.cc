@@ -70,18 +70,3 @@ extern "C" INT32 memcmp(const VOID *ptr1, const VOID *ptr2, USIZE num)
 
     return 0;
 }
-
-PVOID Allocator::CopyMemory(PVOID dest, PCVOID src, USIZE count)
-{
-    return memcpy(dest, src, count);
-}
-
-INT32 Allocator::CompareMemory(PCVOID ptr1, PCVOID ptr2, USIZE num)
-{
-    return memcmp(ptr1, ptr2, num);
-}
-
-PVOID Allocator::SetMemory(PVOID dest, INT32 ch, USIZE count)
-{
-    return memset(dest, ch, count);
-}
