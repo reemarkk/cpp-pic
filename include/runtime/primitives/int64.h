@@ -21,6 +21,10 @@ public:
     {
         return INT64((INT32)0x7FFFFFFF, (UINT32)0xFFFFFFFF);
     }
+    static constexpr INT64 MIN() noexcept
+    {
+        return INT64((INT32)0x80000000, (UINT32)0x00000000);
+    }
     // Default constructor
     constexpr INT64() noexcept : low(0), high(0) {}
 
