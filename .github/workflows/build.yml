@@ -137,8 +137,14 @@ jobs:
           elf="${elfs[0]}"
           echo "=== TEST RUN: ${elf} ==="
           chmod +x "${elf}"
+
+          echo "--- OUTPUT START ---"
+          set +e
           "${elf}"
           rc=$?
+          set -e
+          echo "--- OUTPUT END ---"
+          echo ""
 
           if [[ $rc -ne 0 ]]; then
             echo "❌ TEST FAIL: exit code $rc (expected 0)"
@@ -263,9 +269,15 @@ jobs:
             Write-Host "Note: Running 32-bit binary on 64-bit Windows via WoW64" -ForegroundColor Gray
           }
 
+          Write-Host ""
+          Write-Host "--- OUTPUT START ---" -ForegroundColor DarkGray
           & $exe
-          if ($LASTEXITCODE -ne 0) {
-            throw "❌ TEST FAIL: exit code $LASTEXITCODE (expected 0)"
+          $exitCode = $LASTEXITCODE
+          Write-Host "--- OUTPUT END ---" -ForegroundColor DarkGray
+          Write-Host ""
+
+          if ($exitCode -ne 0) {
+            throw "❌ TEST FAIL: exit code $exitCode (expected 0)"
           }
 
           Write-Host "✔ TEST PASS: exit code 0" -ForegroundColor Green
