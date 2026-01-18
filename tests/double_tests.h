@@ -420,7 +420,7 @@ private:
 	{
 		// Test that DOUBLE arrays can be properly initialized and formatted
 		// This ensures the varargs casting works correctly with Logger
-		DOUBLE testArray[] = { 1.1_embed, 2.2_embed, 3.3_embed, 4.4_embed, 5.5_embed, 6.6_embed, 7.7_embed, 8.8_embed, 9.9_embed, 10.1_embed };
+		DOUBLE testArray[] = { 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.1 };
 
 		// Verify array initialization by checking that values are non-zero
 		// We can't do exact comparisons without generating .rdata, so just verify they're initialized
