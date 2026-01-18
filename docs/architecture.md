@@ -2,7 +2,7 @@
 
 ## Overview
 
-CPP-PIC is a position-independent code (PIC) runtime library that provides a minimal, cross-platform runtime environment without dependencies on standard libraries or dynamic linking.
+CPP-PIC is a position-independent code (PIC) runtime library that provides a minimal, Windows-only runtime environment without dependencies on standard libraries or dynamic linking.
 
 ## Architecture Layers
 
@@ -19,8 +19,7 @@ CPP-PIC is a position-independent code (PIC) runtime library that provides a min
 │   Platform Abstraction Layer                │
 │   (Allocator, Console, Platform Init)       │
 ├─────────────────────────────────────────────┤
-│   Platform-Specific Implementations         │
-│   (Windows / Linux / UEFI)                  │
+│   Windows Platform Implementation           │
 ├─────────────────────────────────────────────┤
 │   Entry Point (_start)                      │
 └─────────────────────────────────────────────┘
@@ -30,14 +29,15 @@ CPP-PIC is a position-independent code (PIC) runtime library that provides a min
 
 ### 1. Entry Point (`src/start.cc`)
 
-The entry point initializes the runtime environment and executes the test suite. Platform-specific initialization:
+The entry point initializes the runtime environment and executes the test suite:
 
-- **Windows/Linux**: `INT32 _start(VOID)`
-- **UEFI**: `_start(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)`
+```cpp
+INT32 _start(VOID)
+```
 
 ### 2. Platform Abstraction Layer
 
-Generic interfaces that delegate to platform-specific implementations:
+Generic interfaces that delegate to Windows-specific implementations:
 
 - **Allocator** ([include/runtime/platform/allocator.h](../include/runtime/platform/allocator.h))
   - Memory allocation/deallocation interface
@@ -48,29 +48,16 @@ Generic interfaces that delegate to platform-specific implementations:
 - **Console** ([include/runtime/console.h](../include/runtime/console.h))
   - Text output abstraction
 
-### 3. Platform-Specific Implementations
+### 3. Windows Platform Implementation
 
-#### Windows (`src/runtime/platform/windows/`)
+Located in `src/runtime/platform/windows/`:
 
-- **PEB Walking** ([peb.cc](../src/runtime/platform/windows/peb.cc)) - Locates process environment
-- **PE Parsing** ([pe.cc](../src/runtime/platform/windows/pe.cc)) - Reads PE file structures
+- **PEB Walking** ([peb.cc](../src/runtime/platform/windows/peb.cc)) - Locates process environment block
+- **PE Parsing** ([pe.cc](../src/runtime/platform/windows/pe.cc)) - Reads PE file structures for API resolution
 - **API Resolution** ([ntdll.cc](../src/runtime/platform/windows/ntdll.cc), [kernel32.cc](../src/runtime/platform/windows/kernel32.cc))
+  - Hash-based API lookup via DJB2 without GetProcAddress
 - **Direct Syscalls** - `NtAllocateVirtualMemory`, `NtFreeVirtualMemory`
-
-#### Linux (`src/runtime/platform/linux/`)
-
-- **Architecture-Specific Syscalls**:
-  - [platform.linux.i386.cc](../src/runtime/platform/linux/platform.linux.i386.cc)
-  - [platform.linux.x86_64.cc](../src/runtime/platform/linux/platform.linux.x86_64.cc)
-  - [platform.linux.armv7a.cc](../src/runtime/platform/linux/platform.linux.armv7a.cc)
-  - [platform.linux.aarch64.cc](../src/runtime/platform/linux/platform.linux.aarch64.cc)
-- **Direct Syscalls** - `mmap`, `munmap`, `write`, `exit`
-
-#### UEFI (`src/runtime/platform/uefi/`)
-
-- **UEFI Boot Services** - `AllocatePool`, `FreePool`
-- **System Table Access** - Console output via Simple Text Output Protocol
-- **Entry Point** - `EfiMain(EFI_HANDLE, EFI_SYSTEM_TABLE*)`
+- **Console Output** - `WriteConsoleW` for Unicode text output
 
 ### 4. Embedded Primitives
 
@@ -78,15 +65,19 @@ Position-independent type implementations:
 
 - **EMBEDDED_STRING** ([embedded_string.h](../include/runtime/platform/primitives/embedded_string.h))
   - Compile-time string decomposition into character literals
+  - Avoids .rdata section by building strings on stack at runtime
 
 - **EMBEDDED_DOUBLE** ([embedded_double.h](../include/runtime/platform/primitives/embedded_double.h))
   - IEEE-754 double as bit pattern decomposition
+  - Embeds as 64-bit immediate values instead of .rdata constants
 
 - **UINT64/INT64** ([uint64.h](../include/runtime/platform/primitives/uint64.h), [int64.h](../include/runtime/platform/primitives/int64.h))
   - Software-implemented 64-bit arithmetic (for 32-bit platforms)
+  - Pure 32-bit word manipulation without native 64-bit instructions
 
 - **DOUBLE** ([double.h](../include/runtime/platform/primitives/double.h))
   - IEEE-754 operations and integer conversions
+  - Software floating-point implementation
 
 ### 5. Runtime Utilities
 
@@ -122,9 +113,6 @@ Position-independent type implementations:
 /ORDER:@orderfile.txt  # Control function placement
 ```
 
-**Linux**:
-- Custom linker script merges `.rodata`, `.bss` into `.text` section
-
 ### No External Dependencies
 
 - **No CRT** - Custom entry point bypasses C runtime
@@ -137,8 +125,6 @@ Position-independent type implementations:
 | Platform | Architectures | Entry Point | Memory | Console |
 |----------|---------------|-------------|--------|---------|
 | **Windows** | i386, x86_64, armv7a, aarch64 | `_start()` | NtAllocateVirtualMemory | WriteConsoleW |
-| **Linux** | i386, x86_64, armv7a, aarch64 | `_start()` | mmap syscall | write syscall |
-| **UEFI** | i386, x86_64, aarch64 | `EfiMain()` | AllocatePool | SimpleTextOutput |
 
 ## Build System
 
@@ -146,13 +132,13 @@ Position-independent type implementations:
 
 - **Toolchain**: Clang/LLVM 20+ with LLD linker
 - **Cross-Compilation**: `-target` flag for multi-architecture
-- **Output**: `.exe` (Windows), `.elf` (Linux), `.efi` (UEFI)
+- **Output**: `.exe` (Windows executables)
 
 ### Build Artifacts
 
 Each build generates:
 
-1. **Executable** - `output.exe`/`.elf`/`.efi`
+1. **Executable** - `output.exe`
 2. **Disassembly** - `output.txt` (sections + code)
 3. **String Analysis** - `output.strings.txt`
 4. **PIC Blob** - `output.bin` (extracted `.text` section)
@@ -163,7 +149,7 @@ Each build generates:
 
 ```
 build/
-└── <platform>/
+└── windows/
     └── <architecture>/
         ├── debug/
         │   ├── cmake/              # Build files
@@ -192,17 +178,20 @@ Located in [include/tests/](../include/tests/):
 ### Running Tests
 
 ```powershell
-# Build all configurations
-.\compile.bat x86_64 windows DEBUG
+# Build specific configuration
+cmake -B "build/windows/x86_64/debug/cmake" `
+      -G Ninja `
+      "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-clang.cmake" `
+      "-DARCHITECTURE=x86_64" `
+      "-DPLATFORM=windows" `
+      "-DBUILD_TYPE=debug"
+cmake --build "build/windows/x86_64/debug/cmake"
 
 # Run Windows test
 .\build\windows\x86_64\debug\output.exe
 
-# Run UEFI test (QEMU)
-.\scripts\run-uefi-qemu.ps1 -Architecture x86_64
-
 # Load PIC blob
-.\scripts\loader.ps1 -BlobPath .\build\windows\x86_64\debug\output.b64.txt
+.\scripts\loader.ps1 -BlobPath .\build\windows\x86_64\release\output.bin
 ```
 
 ## Security Considerations
@@ -215,8 +204,8 @@ Located in [include/tests/](../include/tests/):
 
 ### Direct Syscalls
 
-- **Windows** - Direct `syscall` instruction to `ntdll.dll`
-- **Linux** - Direct syscall interface (no libc)
+- **Windows** - Direct `syscall` instruction to `ntdll.dll` functions
+- No import table dependencies
 
 ### Position Independence
 
@@ -228,27 +217,23 @@ Located in [include/tests/](../include/tests/):
 
 ### VSCode Integration
 
-- **20+ Build Configurations** - All platform/architecture combinations
-- **Debug Configurations** - Native debugging (Windows), LLDB (Linux), QEMU (UEFI)
+- **8 Build Configurations** - All Windows architecture/build-type combinations
+- **Debug Configurations** - Native debugging using cppvsdbg debugger
 - **Quick Build** - `Ctrl+Shift+B`
 
 ### Automation Scripts
 
-- [scripts/install.sh](../scripts/install.sh) - Setup LLVM toolchain (Linux)
-- [scripts/run-uefi-qemu.ps1](../scripts/run-uefi-qemu.ps1) - UEFI testing (Windows)
-- [scripts/run-uefi-qemu.sh](../scripts/run-uefi-qemu.sh) - UEFI testing (Linux/macOS)
 - [scripts/loader.ps1](../scripts/loader.ps1) - Load PIC blob (Windows)
 
 ## Future Enhancements
 
-1. **Networking** - Socket implementation via syscalls
+1. **Networking** - Socket implementation via Windows APIs
 2. **File I/O** - File operations
 3. **Threading** - Multi-threading support
 4. **Cryptography** - Embedded crypto primitives
-5. **Additional Platforms** - macOS, BSD
 
 ## References
 
-- [Platform Guide](platform_guide.md) - Platform-specific implementation details
+- [Platform Guide](platform_guide.md) - Windows implementation details
 - [Build Guide](../README.md) - Build instructions and configuration
 - [Tests](../tests/README.md) - Testing documentation

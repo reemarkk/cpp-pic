@@ -10,8 +10,6 @@
 PVOID GetInstructionAddress(VOID);
 PCHAR ReversePatternSearch(PCHAR ip, const CHAR *pattern, UINT32 len);
 
-#if defined(PLATFORM_WINDOWS)
-
 // Function to get export address from PEB modules
 PVOID ResolveExportAddressFromPebModule(USIZE moduleNameHash, USIZE functionNameHash);
 
@@ -37,49 +35,8 @@ PVOID PerformRelocation(PVOID p);
 #define Initialize(envData) ((VOID)envData)
 #endif
 
-#elif defined(PLATFORM_LINUX)
-typedef struct _ENVIRONMENT_DATA
-{
-    PVOID BaseAddress;
-    BOOL ShouldRelocate;
-} ENVIRONMENT_DATA, *PENVIRONMENT_DATA;
-
-#define PerformRelocation(p) (p)
-#define Initialize(envData) ((VOID)envData)
-
-SSIZE __syscall(SSIZE nr, USIZE a1, USIZE a2, USIZE a3, USIZE a4, USIZE a5, USIZE a6);
-
-#elif defined(PLATFORM_UEFI)
-
-#include "uefi/efi_system_table.h"
-
-typedef struct _ENVIRONMENT_DATA
-{
-    PVOID BaseAddress;
-    BOOL ShouldRelocate;
-    EFI_HANDLE ImageHandle;
-    EFI_SYSTEM_TABLE *SystemTable;
-} ENVIRONMENT_DATA, *PENVIRONMENT_DATA;
-
-#define PerformRelocation(p) (p)
-
-VOID Initialize(PENVIRONMENT_DATA envData);
-
-// Global UEFI pointers - initialized by Initialize()
-extern EFI_SYSTEM_TABLE *gST;
-extern EFI_BOOT_SERVICES *gBS;
-extern EFI_HANDLE gImageHandle;
-
-#endif
-
-// Cross-platform entry point macro
-#if defined(PLATFORM_WINDOWS)
+// Entry point macro
 #define ENTRYPOINT extern "C" __attribute__((noreturn))
-#elif defined(PLATFORM_LINUX)
-#define ENTRYPOINT extern "C" __attribute__((section(".text$main"))) __attribute__((noreturn))
-#elif defined(PLATFORM_UEFI)
-#define ENTRYPOINT extern "C" __attribute__((noreturn)) EFI_STATUS EFIAPI
-#endif
 
 // Cross-platform exit process function
 NO_RETURN VOID ExitProcess(USIZE code);

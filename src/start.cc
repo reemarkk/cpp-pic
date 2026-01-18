@@ -5,19 +5,10 @@
 #include "runtime.h"
 #include "tests.h"
 
-#if defined(PLATFORM_UEFI)
-ENTRYPOINT _start(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
-{
-	ENVIRONMENT_DATA envData;
-	envData.ImageHandle = ImageHandle;
-	envData.SystemTable = SystemTable;
-	Initialize(&envData);
-#else
 ENTRYPOINT INT32 _start(VOID)
 {
 	ENVIRONMENT_DATA envData;
 	Initialize(&envData);
-#endif
 
 	BOOL allPassed = TRUE;
 

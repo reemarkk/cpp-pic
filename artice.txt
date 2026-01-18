@@ -15,7 +15,7 @@ I want to add my two cents to that debate even though long time passed.
 
 ## The Problem: Why ASM and C Fall Short
 
-When writing position-independent code (shellcode, kernel drivers, bootloaders, UEFI apps, embedded firmware), you face three main problems:
+When writing position-independent code (shellcode, kernel drivers, bootloaders, embedded firmware), you face three main problems:
 
 ### 1. No .data/.rdata/.rodata Sections
 Everything must be in code section (.text) - can't store string literals or floating-point constants in separate data sections.
@@ -74,7 +74,7 @@ UINT64 result = bignum * bignum;  // Works on 32-bit!
 Console::WriteFormatted<WCHAR>(L"Value: %d, Pi: %.5f\n"_embed, 42, 3.14159_embed);
 ```
 
-✅ **12 platform combinations:** Windows/Linux/UEFI × i386/x86_64/ARMv7-A/AArch64
+✅ **4 Windows architectures:** i386/x86_64/ARMv7-A/AArch64
 
 ✅ **Modern C++23:** Templates, consteval, fold expressions, concepts, user-defined literals
 
@@ -186,17 +186,16 @@ ZERO .rdata dependencies. Fully position-independent. Modern C++23.
 
 ## Platform Support
 
-| Platform | i386 | x86_64 | ARMv7-A | AArch64 |
-|----------|------|--------|---------|---------|
-| **Windows** | ✅ | ✅ | ✅ | ✅ |
-| **Linux** | ✅ | ✅ | ✅ | ✅ |
-| **UEFI** | ✅ | ✅ | ❌ | ✅ |
+| Architecture | Windows |
+|--------------|---------|
+| **i386** | ✅ |
+| **x86_64** | ✅ |
+| **ARMv7-A** | ✅ |
+| **AArch64** | ✅ |
 
-**12 fully supported combinations!**
+**4 fully supported combinations!**
 
 **Windows:** PEB walking, NtDll syscalls, no imports (Windows 2000-11)
-**Linux:** Direct syscalls (int 0x80/syscall/svc), no libc
-**UEFI:** Boot Services, System Table, pre-boot environment
 
 ---
 
@@ -209,8 +208,7 @@ ZERO .rdata dependencies. Fully position-independent. Modern C++23.
 Open in VSCode and get:
 - `Ctrl+Shift+B` - Build all configurations
 - `F5` - Run/Debug
-- 20+ pre-configured build tasks
-- One-click UEFI testing with QEMU
+- 8 pre-configured build tasks
 - IntelliSense for C++23
 
 ### Manual CMake
@@ -229,19 +227,16 @@ cmake --build build
 ## Use Cases
 
 ### 1. Kernel Development
-Modern C++23 in Windows/Linux drivers. No paged memory needed, works in interrupt context.
+Modern C++23 in Windows drivers. No paged memory needed, works in interrupt context.
 
-### 2. UEFI Applications
-Sophisticated pre-boot tools using C++23 features.
-
-### 3. Embedded Firmware
+### 2. Embedded Firmware
 C++23 on microcontrollers executing from ROM.
 
-### 4. Security Research
+### 3. Security Research
 Position-independent payloads for authorized testing.
 
-### 5. Cross-Platform Tools
-Single codebase for 12 platform combinations.
+### 4. Cross-Architecture Tools
+Single codebase for 4 Windows architecture combinations.
 
 ---
 
@@ -265,7 +260,7 @@ Single codebase for 12 platform combinations.
 
 ### When to Use
 ✅ Position-independent code required
-✅ Kernel/UEFI/embedded environments
+✅ Kernel/embedded environments
 ✅ ROM execution
 
 ❌ Performance-critical string processing
@@ -296,7 +291,7 @@ Single codebase for 12 platform combinations.
 - RAII, compile-time guarantees
 
 **Better than both:**
-- 12 platforms from single codebase
+- 4 Windows architectures from single codebase
 - Zero-overhead abstractions
 
 ### The Real Lesson
@@ -307,8 +302,8 @@ The debate was wrong. It's not "Assembly vs C vs C++".
 
 CPP-PIC proves that with understanding of:
 - Compiler internals
-- Binary formats (PE/ELF)
-- Platform syscalls
+- Binary formats (PE)
+- Platform syscalls (Windows)
 - C++23 metaprogramming
 
 ...we can bring modern C++ everywhere.
@@ -318,7 +313,7 @@ CPP-PIC proves that with understanding of:
 Want everything? ✅ Got it.
 - Printf, floats, strings, templates
 - Position-independence, no .rdata
-- Cross-platform
+- Cross-architecture Windows support
 
 **Language choice should never be limited by compiler behavior.**
 
@@ -332,7 +327,7 @@ Modern C++, used correctly, gives **both control and abstraction**.
 
 CPP-PIC is working code:
 - 15,000 lines of C++23
-- 12 platform/architecture combinations
+- 4 Windows architecture combinations
 - Comprehensive test suite
 
 It proves "impossible" is often "not yet implemented."
@@ -350,14 +345,14 @@ Next time someone says:
 
 ## Technical Specs
 
-**CPP-PIC** (Position-Independent C++23 Runtime)
+**CPP-PIC** (Position-Independent C++23 Runtime for Windows)
 - **Languages:** C++23
 - **Compiler:** LLVM/Clang 20+
 - **Build:** CMake 3.20+ with Ninja
 - **Size:** ~15,000 LOC, 34 headers, 21 source files
-- **Platforms:** Windows, Linux, UEFI
+- **Platform:** Windows
 - **Architectures:** i386, x86_64, ARMv7-A, AArch64
-- **Configurations:** 24 (debug/release × 3 × 4)
+- **Configurations:** 8 (debug/release × 4 architectures)
 - **License:** Proprietary (Educational & Authorized Security Research)
 
 ---

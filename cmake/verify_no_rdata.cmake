@@ -9,7 +9,7 @@ if(NOT DEFINED MAP_FILE)
     message(FATAL_ERROR "MAP_FILE must be defined")
 endif()
 
-# Map file may not exist for debug builds (only release generates map files on Linux)
+# Map file may not exist for debug builds
 if(NOT EXISTS "${MAP_FILE}")
     message(STATUS "Map file not found (expected for debug builds): ${MAP_FILE}")
     message(STATUS "Skipping .rdata verification")

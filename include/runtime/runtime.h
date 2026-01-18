@@ -19,7 +19,7 @@
  * DESIGN PHILOSOPHY:
  *   - Zero CRT dependencies
  *   - Position-independent code support
- *   - Cross-platform (Windows, Linux, UEFI)
+ *   - Windows platform support
  *   - No heap allocations required
  *   - Direct syscall implementations
  */

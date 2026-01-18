@@ -16,7 +16,7 @@ if(WIN32)
         RESULT_VARIABLE RESULT
     )
 else()
-    # Use base64 on Linux/macOS
+    # Use base64 on Unix-like systems
     # Try GNU base64 (with -w flag) first, fall back to BSD base64
     execute_process(
         COMMAND base64 -w 0 "${PIC_FILE}"

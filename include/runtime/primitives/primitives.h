@@ -45,7 +45,6 @@ typedef float FLOAT, *PFLOAT;
 typedef wchar_t WCHAR, *PWCHAR, **PPWCHAR;
 typedef const WCHAR *PCWCHAR;
 
-#if defined(PLATFORM_WINDOWS)
 typedef bool BOOL, *PBOOL, **PPBOOL;
 #if defined(ARCHITECTURE_X86_64) || defined(ARCHITECTURE_AARCH64)
 typedef unsigned long long USIZE, *PUSIZE;
@@ -53,25 +52,6 @@ typedef signed long long SSIZE, *PSSIZE;
 #else
 typedef unsigned int USIZE, *PUSIZE;
 typedef signed int SSIZE, *PSSIZE;
-#endif
-#elif defined(PLATFORM_LINUX)
-typedef bool BOOL, *PBOOL, **PPBOOL;
-#if defined(ARCHITECTURE_X86_64) || defined(ARCHITECTURE_AARCH64)
-typedef unsigned long USIZE, *PUSIZE;
-typedef signed long SSIZE, *PSSIZE;
-#else
-typedef unsigned int USIZE, *PUSIZE;
-typedef signed int SSIZE, *PSSIZE;
-#endif
-#elif defined(PLATFORM_UEFI)
-typedef bool BOOL, *PBOOL, **PPBOOL;
-#if defined(ARCHITECTURE_X86_64) || defined(ARCHITECTURE_AARCH64)
-typedef unsigned long long USIZE, *PUSIZE;
-typedef signed long long SSIZE, *PSSIZE;
-#else
-typedef unsigned int USIZE, *PUSIZE;
-typedef signed int SSIZE, *PSSIZE;
-#endif
 #endif
 
 typedef __builtin_va_list VA_LIST;
@@ -86,13 +66,5 @@ typedef __builtin_va_list VA_LIST;
 #elif defined(PLATFORM_WINDOWS_ARMV7A)
 #define STDCALL
 #elif defined(PLATFORM_WINDOWS_AARCH64)
-#define STDCALL
-#elif defined(PLATFORM_UEFI_X86_64)
-#define STDCALL __attribute__((ms_abi))
-#elif defined(PLATFORM_UEFI_AARCH64)
-#define STDCALL
-#elif defined(PLATFORM_UEFI_I386)
-#define STDCALL __attribute__((cdecl))
-#elif defined(PLATFORM_UEFI)
 #define STDCALL
 #endif
