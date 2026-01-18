@@ -1,4 +1,4 @@
-name: build + test (clang-21)
+name: Build and Test
 
 on:
   pull_request:
@@ -11,22 +11,31 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  LLVM_VERSION: "21.1.6"
+
 jobs:
-  # =========================================================
-  # BUILD (Windows) -> uploads build/**
-  # =========================================================
   build-windows:
+    name: Build ${{ matrix.arch }}-${{ matrix.platform }}
     runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
-        target: [i386-windows, x86_64-windows, aarch64-windows]
-    name: build-${{ matrix.target }}
+        include:
+          - arch: i386
+            platform: windows
+            can-test: true
+          - arch: x86_64
+            platform: windows
+            can-test: true
+          - arch: aarch64
+            platform: windows
+            can-test: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM 21.x and Ninja
+      - name: Install LLVM and Ninja
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
@@ -36,10 +45,11 @@ jobs:
           ninja --version
 
           # Install LLVM
-          $ver = "21.1.6"
+          $ver = "${{ env.LLVM_VERSION }}"
           $exe = "LLVM-$ver-win64.exe"
           $url = "https://github.com/llvm/llvm-project/releases/download/llvmorg-$ver/$exe"
 
+          Write-Host "Downloading LLVM $ver..."
           Invoke-WebRequest -Uri $url -OutFile $exe
           Start-Process -FilePath ".\$exe" -ArgumentList "/S" -Wait
 
@@ -48,63 +58,66 @@ jobs:
           clang --version
           lld-link --version
 
-      - name: Build (${{ matrix.target }})
+      - name: Build
         shell: pwsh
         run: |
-          $target = "${{ matrix.target }}"
-          $parts = $target -split "-"
-          $arch = $parts[0]
-          $platform = $parts[1]
+          $arch = "${{ matrix.arch }}"
+          $platform = "${{ matrix.platform }}"
           Write-Host "=== BUILD: arch=$arch platform=$platform type=release ==="
-          cmake -B "build/$platform/$arch/release/cmake" -G Ninja "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-clang.cmake" "-DARCHITECTURE=$arch" "-DPLATFORM=$platform" "-DBUILD_TYPE=release"
+          cmake -B "build/$platform/$arch/release/cmake" `
+                -G Ninja `
+                "-DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-clang.cmake" `
+                "-DARCHITECTURE=$arch" `
+                "-DPLATFORM=$platform" `
+                "-DBUILD_TYPE=release"
           cmake --build "build/$platform/$arch/release/cmake"
 
-      - name: Upload build artifacts (${{ matrix.target }})
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.target }}
+          name: build-${{ matrix.arch }}-${{ matrix.platform }}
           path: |
             build/**
             !build/**/cmake/CMakeFiles/**
 
-  # =========================================================
-  # TEST (Windows)
-  # - i386: Runs on x64 via WoW64 (32-bit compatibility layer)
-  # - x86_64: Runs natively on x64 runner
-  # - aarch64: Runs on self-hosted ARM64 Windows runner
-  # =========================================================
   test-windows:
+    name: Test ${{ matrix.arch }}-${{ matrix.platform }}
     needs: [build-windows]
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: i386-windows
-            runs-on: windows-2022
-            can-run: true
-          - target: x86_64-windows
-            runs-on: windows-2022
-            can-run: true
-          - target: aarch64-windows
-            runs-on: windows-2022
-            can-run: false
-    runs-on: ${{ matrix.runs-on }}
-    name: test-${{ matrix.target }}
+          - arch: i386
+            platform: windows
+            can-test: true
+            note: "Runs on x64 via WoW64 (32-bit compatibility)"
+          - arch: x86_64
+            platform: windows
+            can-test: true
+            note: "Runs natively on x64"
+          - arch: aarch64
+            platform: windows
+            can-test: false
+            note: "Build-only (requires ARM64 runner to execute)"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download build artifacts (${{ matrix.target }})
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: build-${{ matrix.target }}
+          name: build-${{ matrix.arch }}-${{ matrix.platform }}
           path: artifacts
 
-      - name: Run EXE test for ${{ matrix.target }}
-        if: matrix.can-run
+      - name: Run test
+        if: matrix.can-test
         shell: pwsh
         run: |
-          Write-Host "=== Testing ${{ matrix.target }} on ${{ matrix.runs-on }} ===" -ForegroundColor Cyan
+          $arch = "${{ matrix.arch }}"
+          $platform = "${{ matrix.platform }}"
+          Write-Host "=== Testing $arch-$platform ===" -ForegroundColor Cyan
+          Write-Host "Note: ${{ matrix.note }}" -ForegroundColor Gray
           Write-Host ""
 
           $exes = Get-ChildItem -Path artifacts -Recurse -Filter *.exe -Exclude a.exe
@@ -112,36 +125,31 @@ jobs:
             throw "No .exe found in artifacts/"
           }
           if ($exes.Count -gt 1) {
-            Write-Host "More than one .exe found (ambiguous):"
+            Write-Host "Multiple .exe files found (ambiguous):"
             $exes | ForEach-Object { Write-Host "  $($_.FullName)" }
             throw "Ambiguous .exe selection"
           }
 
           $exe = $exes[0].FullName
-          Write-Host "=== TEST RUN: $exe ===" -ForegroundColor Yellow
-
-          if ("${{ matrix.target }}" -eq "i386-windows") {
-            Write-Host "Note: Running 32-bit binary on 64-bit Windows via WoW64" -ForegroundColor Gray
-          }
-          Write-Host "Note: Console output uses direct API calls and may not appear in CI logs" -ForegroundColor Gray
+          Write-Host "=== Executing: $exe ===" -ForegroundColor Yellow
           Write-Host ""
 
           & $exe
           if ($LASTEXITCODE -ne 0) {
-            throw "❌ TEST FAIL: exit code $LASTEXITCODE (expected 0)"
+            throw "❌ TEST FAILED: exit code $LASTEXITCODE (expected 0)"
           }
 
-          Write-Host "✔ TEST PASS: exit code 0" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "✔ TEST PASSED" -ForegroundColor Green
 
-      - name: Skip test (architecture mismatch)
-        if: ${{ !matrix.can-run }}
+      - name: Skip test
+        if: ${{ !matrix.can-test }}
         shell: pwsh
         run: |
-          Write-Host "=== Testing ${{ matrix.target }} ===" -ForegroundColor Cyan
+          $arch = "${{ matrix.arch }}"
+          $platform = "${{ matrix.platform }}"
+          Write-Host "=== Testing $arch-$platform ===" -ForegroundColor Cyan
           Write-Host ""
-          Write-Host "⚠ Skipping runtime test: ${{ matrix.target }} binary cannot run on ${{ matrix.runs-on }}" -ForegroundColor Yellow
+          Write-Host "⚠ Skipping test execution: ${{ matrix.note }}" -ForegroundColor Yellow
           Write-Host ""
-          Write-Host "To test aarch64-windows binaries, modify the workflow to use:" -ForegroundColor Gray
-          Write-Host "  runs-on: [self-hosted, windows, ARM64]" -ForegroundColor Gray
-          Write-Host ""
-          Write-Host "Build succeeded - only execution is skipped." -ForegroundColor Green
+          Write-Host "Build completed successfully - execution skipped on this runner." -ForegroundColor Green
