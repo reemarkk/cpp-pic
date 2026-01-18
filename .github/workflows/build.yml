@@ -203,17 +203,27 @@ jobs:
             !build/**/cmake/CMakeFiles/**
 
   # =========================================================
-  # TEST (Windows x64 runner)
-  # - Runs i386/x86_64 EXEs
-  # - Skips aarch64-windows runtime test (needs Windows ARM64 runner)
+  # TEST (Windows)
+  # - i386: Runs on x64 via WoW64 (32-bit compatibility layer)
+  # - x86_64: Runs natively on x64 runner
+  # - aarch64: Runs on self-hosted ARM64 Windows runner
   # =========================================================
   test-windows:
-    runs-on: windows-2022
     needs: [build-windows]
     strategy:
       fail-fast: false
       matrix:
-        target: [i386-windows, x86_64-windows, aarch64-windows]
+        include:
+          - target: i386-windows
+            runs-on: windows-2022
+            can-run: true
+          - target: x86_64-windows
+            runs-on: windows-2022
+            can-run: true
+          - target: aarch64-windows
+            runs-on: [self-hosted, windows, ARM64]
+            can-run: true
+    runs-on: ${{ matrix.runs-on }}
     name: test-${{ matrix.target }}
     steps:
       - name: Checkout
@@ -226,10 +236,10 @@ jobs:
           path: artifacts
 
       - name: Run EXE test for ${{ matrix.target }}
-        if: matrix.target != 'aarch64-windows'
+        if: matrix.can-run
         shell: pwsh
         run: |
-          Write-Host "=== Testing ${{ matrix.target }} ===" -ForegroundColor Cyan
+          Write-Host "=== Testing ${{ matrix.target }} on ${{ matrix.runs-on }} ===" -ForegroundColor Cyan
           Write-Host ""
           Write-Host "=== Artifact tree (top-level only) ==="
           Get-ChildItem -Path artifacts -Recurse -Depth 5 -File | ForEach-Object { Write-Host "  $($_.FullName)" }
@@ -248,6 +258,11 @@ jobs:
           $exe = $exes[0].FullName
           Write-Host "=== TEST RUN: $exe ===" -ForegroundColor Yellow
 
+          # Show architecture info for verification
+          if ("${{ matrix.target }}" -eq "i386-windows") {
+            Write-Host "Note: Running 32-bit binary on 64-bit Windows via WoW64" -ForegroundColor Gray
+          }
+
           & $exe
           if ($LASTEXITCODE -ne 0) {
             throw "❌ TEST FAIL: exit code $LASTEXITCODE (expected 0)"
@@ -255,12 +270,15 @@ jobs:
 
           Write-Host "✔ TEST PASS: exit code 0" -ForegroundColor Green
 
-      - name: Skip aarch64-windows test (requires ARM64 runner)
-        if: matrix.target == 'aarch64-windows'
+      - name: Skip test (architecture mismatch)
+        if: ${{ !matrix.can-run }}
         shell: pwsh
         run: |
           Write-Host "=== Testing ${{ matrix.target }} ===" -ForegroundColor Cyan
           Write-Host ""
-          Write-Host "⚠ Skipping runtime test: ARM64 Windows binaries cannot run on x64 Windows runners." -ForegroundColor Yellow
-          Write-Host "To test aarch64-windows, use a self-hosted Windows ARM64 runner."
-          Write-Host "Build artifacts were created successfully - only execution is skipped." -ForegroundColor Green
+          Write-Host "⚠ Skipping runtime test: ${{ matrix.target }} binary cannot run on ${{ matrix.runs-on }}" -ForegroundColor Yellow
+          Write-Host ""
+          Write-Host "To test aarch64-windows binaries, modify the workflow to use:" -ForegroundColor Gray
+          Write-Host "  runs-on: [self-hosted, windows, ARM64]" -ForegroundColor Gray
+          Write-Host ""
+          Write-Host "Build succeeded - only execution is skipped." -ForegroundColor Green
