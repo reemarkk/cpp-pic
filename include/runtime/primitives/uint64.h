@@ -52,6 +52,7 @@
 #pragma once
 
 #include "primitives.h"
+#include "int64_common.h"
 
 /**
  * UINT64 - Position-independent 64-bit unsigned integer class
@@ -134,44 +135,16 @@ public:
         return *this;
     }
 
-    // Comparison operators
-    constexpr bool operator==(const UINT64 &other) const noexcept
-    {
-        return (low == other.low) && (high == other.high);
-    }
+    // =========================================================================
+    // COMMON OPERATIONS (shared with INT64 via macros - no code duplication)
+    // =========================================================================
 
-    constexpr bool operator!=(const UINT64 &other) const noexcept
-    {
-        return !(*this == other);
-    }
+    // Comparison operators: ==, !=, <, <=, >, >= (36 lines → 1 macro)
+    DEFINE_INT64_COMPARISON_OPERATORS(UINT64)
 
-    constexpr bool operator<(const UINT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high < other.high;
-        return low < other.low;
-    }
-
-    constexpr bool operator<=(const UINT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high < other.high;
-        return low <= other.low;
-    }
-
-    constexpr bool operator>(const UINT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high > other.high;
-        return low > other.low;
-    }
-
-    constexpr bool operator>=(const UINT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high > other.high;
-        return low >= other.low;
-    }
+    // =========================================================================
+    // TYPE-SPECIFIC OPERATIONS (arithmetic - unique to UINT64)
+    // =========================================================================
 
     // Arithmetic operators
     constexpr UINT64 operator+(const UINT64 &other) const noexcept
@@ -464,27 +437,10 @@ public:
         return *this ^ UINT64(val);
     }
 
-    // Bitwise operators
-    constexpr UINT64 operator&(const UINT64 &other) const noexcept
-    {
-        return UINT64(high & other.high, low & other.low);
-    }
+    // Bitwise operators: &, |, ^, ~ (20 lines → 1 macro)
+    DEFINE_INT64_BITWISE_OPERATORS(UINT64)
 
-    constexpr UINT64 operator|(const UINT64 &other) const noexcept
-    {
-        return UINT64(high | other.high, low | other.low);
-    }
-
-    constexpr UINT64 operator^(const UINT64 &other) const noexcept
-    {
-        return UINT64(high ^ other.high, low ^ other.low);
-    }
-
-    constexpr UINT64 operator~() const noexcept
-    {
-        return UINT64(~high, ~low);
-    }
-
+    // Shift operators (unsigned-specific - not shared with INT64)
     constexpr UINT64 operator<<(int shift) const noexcept
     {
         if (shift < 0 || shift >= 64)
@@ -546,27 +502,10 @@ public:
         return *this;
     }
 
-    constexpr UINT64 &operator&=(const UINT64 &other) noexcept
-    {
-        high &= other.high;
-        low &= other.low;
-        return *this;
-    }
+    // Compound bitwise assignments: &=, |=, ^= (20 lines → 1 macro)
+    DEFINE_INT64_BITWISE_ASSIGNMENTS(UINT64)
 
-    constexpr UINT64 &operator|=(const UINT64 &other) noexcept
-    {
-        high |= other.high;
-        low |= other.low;
-        return *this;
-    }
-
-    constexpr UINT64 &operator^=(const UINT64 &other) noexcept
-    {
-        high ^= other.high;
-        low ^= other.low;
-        return *this;
-    }
-
+    // Shift assignment operators (unsigned-specific)
     constexpr UINT64 &operator<<=(int shift) noexcept
     {
         if (shift < 0 || shift >= 64)
@@ -615,34 +554,8 @@ public:
         return *this;
     }
 
-    // Increment/Decrement
-    constexpr UINT64 &operator++() noexcept // Prefix
-    {
-        if (++low == 0) // If low wrapped to 0, increment high
-            ++high;
-        return *this;
-    }
-
-    constexpr UINT64 operator++(int) noexcept // Postfix
-    {
-        UINT64 temp = *this;
-        ++(*this);
-        return temp;
-    }
-
-    constexpr UINT64 &operator--() noexcept // Prefix
-    {
-        if (low-- == 0) // If low was 0 before decrement, borrow from high
-            --high;
-        return *this;
-    }
-
-    constexpr UINT64 operator--(int) noexcept // Postfix
-    {
-        UINT64 temp = *this;
-        --(*this);
-        return temp;
-    }
+    // Increment/Decrement operators: ++, -- (28 lines → 1 macro)
+    DEFINE_INT64_INCREMENT_DECREMENT(UINT64)
 };
 
 // Pointer types

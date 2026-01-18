@@ -1,6 +1,7 @@
 #pragma once
 
 #include "uint64.h"
+#include "int64_common.h"
 
 /**
  * INT64 - Position-independent 64-bit signed integer class
@@ -80,34 +81,17 @@ public:
         return *this;
     }
 
-    // Comparison operators
-    constexpr bool operator==(const INT64 &other) const noexcept
-    {
-        return (low == other.low) && (high == other.high);
-    }
+    // =========================================================================
+    // COMMON OPERATIONS (shared with UINT64 via macros - no code duplication)
+    // =========================================================================
 
-    constexpr bool operator!=(const INT64 &other) const noexcept
-    {
-        return !(*this == other);
-    }
+    // Comparison operators: ==, !=, <, <=, >, >= (36 lines → 1 macro)
+    DEFINE_INT64_COMPARISON_OPERATORS(INT64)
 
-    constexpr bool operator<(const INT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high < other.high;
-        return low < other.low;
-    }
-
+    // Additional comparison operators with INT32 (type-specific)
     constexpr bool operator<(INT32 val) const noexcept
     {
         return *this < INT64(val);
-    }
-
-    constexpr bool operator<=(const INT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high < other.high;
-        return low <= other.low;
     }
 
     constexpr bool operator<=(INT32 val) const noexcept
@@ -118,26 +102,12 @@ public:
         return low <= (UINT32)val;
     }
 
-    constexpr bool operator>(const INT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high > other.high;
-        return low > other.low;
-    }
-
     constexpr bool operator>(INT32 val) const noexcept
     {
         INT32 valHigh = val < 0 ? -1 : 0;
         if (high != valHigh)
             return high > valHigh;
         return low > (UINT32)val;
-    }
-
-    constexpr bool operator>=(const INT64 &other) const noexcept
-    {
-        if (high != other.high)
-            return high > other.high;
-        return low >= other.low;
     }
 
     constexpr bool operator>=(INT32 val) const noexcept
@@ -159,6 +129,10 @@ public:
         INT32 valHigh = val < 0 ? -1 : 0;
         return (high != valHigh) || (low != (UINT32)val);
     }
+
+    // =========================================================================
+    // TYPE-SPECIFIC OPERATIONS (arithmetic - unique to INT64)
+    // =========================================================================
 
     // Arithmetic operators
     constexpr INT64 operator+(const INT64 &other) const noexcept
@@ -247,27 +221,10 @@ public:
         return *this / INT64(val);
     }
 
-    // Bitwise operators
-    constexpr INT64 operator&(const INT64 &other) const noexcept
-    {
-        return INT64(high & other.high, low & other.low);
-    }
+    // Bitwise operators: &, |, ^, ~ (20 lines → 1 macro)
+    DEFINE_INT64_BITWISE_OPERATORS(INT64)
 
-    constexpr INT64 operator|(const INT64 &other) const noexcept
-    {
-        return INT64(high | other.high, low | other.low);
-    }
-
-    constexpr INT64 operator^(const INT64 &other) const noexcept
-    {
-        return INT64(high ^ other.high, low ^ other.low);
-    }
-
-    constexpr INT64 operator~() const noexcept
-    {
-        return INT64(~high, ~low);
-    }
-
+    // Shift operators (signed-specific - different from UINT64 for right shift)
     constexpr INT64 operator<<(int shift) const noexcept
     {
         if (shift < 0 || shift >= 64)
@@ -331,27 +288,10 @@ public:
         return *this;
     }
 
-    constexpr INT64 &operator&=(const INT64 &other) noexcept
-    {
-        high &= other.high;
-        low &= other.low;
-        return *this;
-    }
+    // Compound bitwise assignments: &=, |=, ^= (20 lines → 1 macro)
+    DEFINE_INT64_BITWISE_ASSIGNMENTS(INT64)
 
-    constexpr INT64 &operator|=(const INT64 &other) noexcept
-    {
-        high |= other.high;
-        low |= other.low;
-        return *this;
-    }
-
-    constexpr INT64 &operator^=(const INT64 &other) noexcept
-    {
-        high ^= other.high;
-        low ^= other.low;
-        return *this;
-    }
-
+    // Shift assignment operators (signed-specific)
     constexpr INT64 &operator<<=(int shift) noexcept
     {
         if (shift < 0 || shift >= 64)
@@ -404,34 +344,8 @@ public:
         return *this;
     }
 
-    // Increment/Decrement
-    constexpr INT64 &operator++() noexcept // Prefix
-    {
-        if (++low == 0) // If low wrapped to 0, increment high
-            ++high;
-        return *this;
-    }
-
-    constexpr INT64 operator++(int) noexcept // Postfix
-    {
-        INT64 temp = *this;
-        ++(*this);
-        return temp;
-    }
-
-    constexpr INT64 &operator--() noexcept // Prefix
-    {
-        if (low-- == 0) // If low was 0 before decrement, borrow from high
-            --high;
-        return *this;
-    }
-
-    constexpr INT64 operator--(int) noexcept // Postfix
-    {
-        INT64 temp = *this;
-        --(*this);
-        return temp;
-    }
+    // Increment/Decrement operators: ++, -- (28 lines → 1 macro)
+    DEFINE_INT64_INCREMENT_DECREMENT(INT64)
 };
 
 // Pointer types
