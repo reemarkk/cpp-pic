@@ -420,7 +420,7 @@ private:
 	{
 		// Test that DOUBLE arrays can be properly initialized and formatted
 		// This ensures the varargs casting works correctly with Logger
-		DOUBLE testArray[] = { 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.1 };
+		DOUBLE testArray[] = { 1.1_embed, 2.2_embed, 3.3_embed, 4.4_embed, 5.5_embed, 6.6_embed, 7.7_embed, 8.8_embed, 9.9_embed, 10.1_embed };
 
 		// Verify array initialization by checking that values are non-zero
 		// We can't do exact comparisons without generating .rdata, so just verify they're initialized
@@ -434,10 +434,12 @@ private:
 		}
 
 		// Test formatting output (this also tests that the values are properly passed through varargs)
-		for (INT64 i = 0; i < 10; i++)
+		for (INT32 i = 0; i < 10; i++)
 		{
 			// The Logger::Info call exercises the varargs casting
-			Logger::Info<WCHAR>(L"    DOUBLE Array Value [%lld]: %f"_embed, (signed long long)i, (double)testArray[(signed long long)i]);
+			DOUBLE val = testArray[i];
+			double native_val = (double)val;
+			Logger::Info<WCHAR>(L"    DOUBLE Array Value [%d]: %f"_embed, i, native_val);
 		}
 
 		return TRUE;
