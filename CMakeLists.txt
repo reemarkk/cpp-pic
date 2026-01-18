@@ -84,11 +84,19 @@ set(BASE_COMPILER_FLAGS
 )
 
 # x86-specific compiler flags (not valid on ARM architectures)
+# Note: -msoft-float is only used for Windows/UEFI platforms, not Linux
+# On Linux, -msoft-float breaks varargs ABI for double parameters
 if(ARCHITECTURE_LC STREQUAL "i386" OR ARCHITECTURE_LC STREQUAL "x86_64")
     list(APPEND BASE_COMPILER_FLAGS
         -mno-stack-arg-probe                # Disable Windows stack probing (__chkstk calls) - x86 only
-        -msoft-float                        # Use software floating-point ABI (no FPU register dependencies) - x86 only
     )
+    # Only use -msoft-float on Windows and UEFI platforms
+    # Linux x86_64 requires hardware float ABI for proper varargs compatibility
+    if(PLATFORM_LC STREQUAL "windows" OR PLATFORM_LC STREQUAL "uefi")
+        list(APPEND BASE_COMPILER_FLAGS
+            -msoft-float                    # Use software floating-point ABI (no FPU register dependencies)
+        )
+    endif()
 endif()
 
 # ARM-specific compiler flags (aarch64 and armv7a)
