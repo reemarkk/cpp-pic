@@ -243,44 +243,36 @@ jobs:
 
       - name: Run EXE test for ${{ matrix.target }}
         if: matrix.can-run
-        shell: cmd
+        shell: pwsh
         run: |
-          @echo off
-          echo === Testing ${{ matrix.target }} on ${{ matrix.runs-on }} ===
-          echo.
-          echo === Locating executable ===
+          Write-Host "=== Testing ${{ matrix.target }} on ${{ matrix.runs-on }} ===" -ForegroundColor Cyan
+          Write-Host ""
 
-          for /r artifacts %%f in (*.exe) do (
-            echo Found: %%f
-            if not "%%~nxf"=="a.exe" (
-              set "EXE_PATH=%%f"
-            )
-          )
+          $exes = Get-ChildItem -Path artifacts -Recurse -Filter *.exe -Exclude a.exe
+          if ($exes.Count -eq 0) {
+            throw "No .exe found in artifacts/"
+          }
+          if ($exes.Count -gt 1) {
+            Write-Host "More than one .exe found (ambiguous):"
+            $exes | ForEach-Object { Write-Host "  $($_.FullName)" }
+            throw "Ambiguous .exe selection"
+          }
 
-          if not defined EXE_PATH (
-            echo ERROR: No .exe found in artifacts/
-            exit /b 1
-          )
+          $exe = $exes[0].FullName
+          Write-Host "=== TEST RUN: $exe ===" -ForegroundColor Yellow
 
-          echo.
-          echo === TEST RUN: %EXE_PATH% ===
-          if "${{ matrix.target }}"=="i386-windows" echo Note: Running 32-bit binary on 64-bit Windows via WoW64
-          echo.
-          echo --- OUTPUT START ---
+          if ("${{ matrix.target }}" -eq "i386-windows") {
+            Write-Host "Note: Running 32-bit binary on 64-bit Windows via WoW64" -ForegroundColor Gray
+          }
+          Write-Host "Note: Console output uses direct API calls and may not appear in CI logs" -ForegroundColor Gray
+          Write-Host ""
 
-          "%EXE_PATH%"
-          set EXIT_CODE=%ERRORLEVEL%
+          & $exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "❌ TEST FAIL: exit code $LASTEXITCODE (expected 0)"
+          }
 
-          echo --- OUTPUT END ---
-          echo.
-
-          if %EXIT_CODE% neq 0 (
-            echo TEST FAIL: exit code %EXIT_CODE% ^(expected 0^)
-            exit /b %EXIT_CODE%
-          )
-
-          echo TEST PASS: exit code 0
-          exit /b 0
+          Write-Host "✔ TEST PASS: exit code 0" -ForegroundColor Green
 
       - name: Skip test (architecture mismatch)
         if: ${{ !matrix.can-run }}
