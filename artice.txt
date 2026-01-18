@@ -47,7 +47,7 @@ Must build strings character by character at runtime. No way to use `"Hello"` di
 
 ---
 
-## The Solution: CPP-PIC
+## The Solution: C++
 
 **This is cpp-pic. Yes, not ASM or C - it's C++23!**
 
