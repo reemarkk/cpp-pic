@@ -256,7 +256,7 @@ Core operations are handled using low-level native functions for memory manageme
 
 **Minimal Win32 interaction (kernel32.dll):**
 Limited use of Win32 APIs for basic console output:
-- `GetStdHandle` - Retrieves standard console handles
+- `WriteConsoleA` - Writes ANSI (narrow) character output to the console
 - `WriteConsoleW` - Writes wide-character output to the console
 
 ### PEB Walking
