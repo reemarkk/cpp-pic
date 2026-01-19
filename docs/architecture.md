@@ -2,7 +2,7 @@
 
 ## Overview
 
-CPP-PIC is a position-independent code (PIC) runtime library that provides a minimal, Windows-only runtime environment without dependencies on standard libraries or dynamic linking.
+CPP-PIC is a Windows-only, position-independent code (PIC) runtime library that provides a minimal runtime environment without relying on standard libraries or dynamic linking.
 
 ## Architecture Layers
 
@@ -56,7 +56,7 @@ Located in `src/runtime/platform/windows/`:
 - **PE Parsing** ([pe.cc](../src/runtime/platform/windows/pe.cc)) - Reads PE file structures for API resolution
 - **API Resolution** ([ntdll.cc](../src/runtime/platform/windows/ntdll.cc), [kernel32.cc](../src/runtime/platform/windows/kernel32.cc))
   - Hash-based API lookup via DJB2 without GetProcAddress
-- **Direct Syscalls** - `NtAllocateVirtualMemory`, `NtFreeVirtualMemory`
+- **Native Interfaces** - `NtAllocateVirtualMemory`, `NtFreeVirtualMemory`
 - **Console Output** - `WriteConsoleW` for Unicode text output
 
 ### 4. Embedded Primitives
@@ -115,9 +115,9 @@ Position-independent type implementations:
 
 ### No External Dependencies
 
-- **No CRT** - Custom entry point bypasses C runtime
-- **No Standard Library** - All functionality implemented from scratch
-- **No Dynamic Linking** - Direct syscalls or API resolution via PEB/PE parsing
+- **No CRT** - Uses a custom entry point, bypassing the C runtime.
+- **No Standard Library** - All functionality implemented from scratch.
+- **No Dynamic Linking** - Uses low-level native interfaces or API resolution via PEB/PE parsing
 - **No Global Constructors** - Avoid `.init_array` sections
 
 ## Supported Platforms
@@ -198,20 +198,20 @@ cmake --build "build/windows/x86_64/debug/cmake"
 
 ### API Resolution (Windows)
 
-- **PEB Walking** - Locates loaded modules without `GetModuleHandle`
-- **PE Parsing** - Finds exports without `GetProcAddress`
-- **Hash-Based Lookup** - Uses DJB2 hash to avoid storing strings
+- **PEB Walking** - Locates loaded modules without `GetModuleHandle`.
+- **PE Parsing** - Finds exports without `GetProcAddress`.
+- **Hash-Based Lookup** - Uses DJB2 hash to avoid storing strings.
 
-### Direct Syscalls
+### Low-Level Native Interfaces
 
-- **Windows** - Direct `syscall` instruction to `ntdll.dll` functions
-- No import table dependencies
+- **Windows** - Calls `ntdll.dll` functions.
+- **No Import Table Dependencies** - Does not rely on the import table.
 
 ### Position Independence
 
-- **No Relocations** - All code/data in single `.text` section
-- **Embedded Constants** - Strings/doubles decomposed at compile-time
-- **Base Address Agnostic** - Works at any memory address
+- **No Relocations** - All code and data reside in a single `.text` section.
+- **Embedded Constants** - Strings and doubles are decomposed at compile-time.
+- **Base Address Agnostic** - Can execute correctly at any memory address.
 
 ## Development Workflow
 
