@@ -25,19 +25,22 @@
 
 ## Overview
 
-CPP-PIC is a groundbreaking C++23 runtime library designed specifically for Windows that eliminates all `.rdata` section dependencies. By embedding constants directly in executable code, we've created a truly position-independent runtime suitable for shellcode, code injection, and embedded systems.
+CPP-PIC is a C++23 runtime library for Windows designed to operate without any .rdata section depenedencies.
+By embedding constants directly in executable code, we've created a truly position-independent runtime, making it suitable for shellcode, code injection, and embedded systems.
 
-This project represents years of research into compiler behavior, binary structure, and low-level Windows programming. Whether you're conducting security research, developing kernel components, or exploring the boundaries of modern C++, CPP-PIC provides unprecedented control over your binary's memory layout.
+This project is the result of years of research into compailer behavior, binary strucrure and low-level Windows development.
+Whether used for security research, kernel or system development, or experimentation with modern C++,
+CPP-PIC offers exceptional control over binary memory layout.
 
 ## Key Features
 
-- **Zero .rdata Dependencies**: All string literals and floating-point constants embedded as immediate values in code
-- **Position-Independent**: No relocations required, suitable for shellcode and injection payloads
-- **No CRT Required**: Complete standalone runtime with no standard library dependencies
-- **Modern C++23**: Leverages compile-time features including concepts, consteval, and fold expressions
-- **Windows-Native**: Direct syscalls, PEB walking, PE parsing - no imports
-- **Multi-Architecture**: Supports i386, x86_64, armv7a, and aarch64
-- **Full Optimization Support**: Works with all LLVM optimization levels (-O0 through -Oz)
+- **Zero .rdata Dependencies**: All string literals and floating-point constants are embedded directly as immediate values in code, eliminating read-only data sections.
+- **Position-Independent**: Address-independent execution without static relocation dependencies, suitable for in-memory execution, manual mapping, and custom loaders.
+- **No CRT Required**: Implements a fully standalone runtime that operates without the Windows C or C++ runtime libraries.
+- **Modern C++23**: Utilizes the latest C++23 features, including concepts, consteval, and fold expressions, to enable compile-time computation and improve strong type safety.
+- **Windows-Native**: Implements functionality through native interfaces and runtime inspection of Windows structures, avoiding the use of imported functions.
+- **Multi-Architecture**: Provides architecture-specific implementation for i386, x86_64, armv7a, and aarch64 targets.
+- **Full Optimization Support**: Supports all LLVM optimization levels, allowing builds from unoptimized (-O0) to maximum optimization or performance size(-Oz or -03).
 
 ## Platform Support
 
@@ -122,11 +125,12 @@ cmake --build build/windows/aarch64/release/cmake
 
 ## How It Works
 
-CPP-PIC leverages cutting-edge C++23 features to achieve complete position independence through three key innovations:
+CPP-PIC leverages modern C++23 features to achieve full position independence through three key innovations:
 
 ### 1. Compile-Time String Decomposition
 
-Using user-defined literal operators and variadic templates, strings are decomposed into individual characters at compile-time:
+Strings are broken down into individual characters at compile time using user-defined literal operators and variadic templates.
+This approach allows all string data to be embedded directly into the instruction stream, eliminating reliance on read-only data sections.
 
 ```cpp
 template <typename TChar, TChar... Chars>
@@ -157,7 +161,8 @@ movw $0x6F, 8(%rdi)     ; 'o'
 
 ### 2. IEEE-754 Bit Pattern Embedding
 
-Floating-point values are converted to their IEEE-754 bit representation at compile-time:
+CPP-PIC transforms floating-point literals into their IEEE-754 binary encoding during compilation.
+Each value is stored inline in the executable code, avoiding .rdata dependencies and supporting fully position-independent execution.
 
 ```cpp
 struct EMBEDDED_DOUBLE {
@@ -183,7 +188,8 @@ movabsq $0x400921f9f01b866e, %rax  ; Pi as 64-bit immediate
 
 ### 3. Pure Integer-Based Type Conversions
 
-All type conversions use bitwise operations, eliminating compiler-generated conversion constants:
+All type conversions are performed using bitwise operations rather than compiler-generated constants.
+This ensures that no additional data is stored in read-only sections and that all conversions remain fully position-independent.
 
 ```cpp
 // Extracts integer value from IEEE-754 without FPU instructions
@@ -238,22 +244,24 @@ After building, artifacts are placed in `build/windows/<arch>/<type>/`:
 
 ## Windows Implementation
 
-### Direct Syscalls
+### Low-Level Native Interfaces
 
-CPP-PIC bypasses the standard Windows API and uses direct syscalls:
+CPP-PIC relies on low-level native APIs, avoiding external libraries or exported DLLs whenever possible. The project primarily interacts with the system through the following:
 
-**ntdll.dll:**
-- `NtAllocateVirtualMemory` - Allocate memory pages
-- `NtFreeVirtualMemory` - Free memory pages
-- `NtTerminateProcess` - Exit process
+**Native interfaces (ntdll.dll):**
+Core operations are handled using low-level native functions for memory management and process control.
+- `NtAllocateVirtualMemory` - Allocates virtual memory pages
+- `NtFreeVirtualMemory` - Releases virtual memory pages
+- `NtTerminateProcess` - Terminates the current process
 
-**kernel32.dll:**
-- `GetStdHandle` - Get console handles
-- `WriteConsoleW` - Write wide strings to console
+**Minimal Win32 interaction (kernel32.dll):**
+Limited use of Win32 APIs for basic console output:
+- `GetStdHandle` - Retrieves standard console handles
+- `WriteConsoleW` - Writes wide-character output to the console
 
 ### PEB Walking
 
-The Process Environment Block (PEB) is accessed to locate loaded modules:
+CPP-PIC uses the PEB to enumerate loaded modules directly, avoiding Win32 API dependencies for module discovery.
 
 ```cpp
 // Locate PEB (x64)
@@ -268,7 +276,7 @@ LIST_ENTRY* moduleList = &ldr->InMemoryOrderModuleList;
 
 ### PE Parsing
 
-Export tables are parsed to resolve API functions by hash:
+CPP-PIC parses Portable Executable (PE) headers and export tables to resolve API functions by hash at runtime.
 
 ```cpp
 // Find export by DJB2 hash
@@ -279,10 +287,9 @@ auto writeConsole = GetExportByHash(kernel32, 0x7B8F69D2);
 ```
 
 **Benefits:**
-- No import table
-- No GetProcAddress calls
-- Hash-based lookups prevent string analysis
-- Position-independent
+- Import-Free Execution – No import table or GetProcAddress required
+- Hash-Based API Resolution – Avoids string-based function references
+- Fully Position-Independent – Can execute at arbitrary memory addresse
 
 ### Console Output
 
@@ -382,23 +389,23 @@ cpp-pic/
 | Domain | Examples |
 |--------|----------|
 | **Security Research** | Shellcode, code injection, exploit development |
-| **Embedded Systems** | No CRT, minimal dependencies, bare metal |
-| **Kernel Development** | Windows kernel modules, drivers |
-| **Binary Analysis** | Understanding compiler behavior, reverse engineering |
-| **Education** | Compiler construction, OS development |
+| **Embedded Systems** | Minimal dependencies, no CRT required, bare-metal environments |
+| **Kernel Development** | Windows kernel modules,device drivers |
+| **Binary Analysis** | Understanding compiler behavior, reverse engineering, PE analysis |
+| **Education** | Compiler design, OS development, low-level programming |
 
 ### Why CPP-PIC?
 
-- **Security**: Position-independent payloads without relocation handling
-- **Embedded**: Modern C++23 in resource-constrained environments
-- **Kernel**: C++23 features without runtime initialization
-- **Research**: Explore compiler behavior and binary structure
+- **Security**: Address-independent execution without relocations.
+- **Embedded**: Minimal, standalone runtime for constrained systems.
+- **Kernel**: Modern C++23 features without CRT or runtime initialization.
+- **Research**: Study compiler behavior, PE structure, and low-level binaries.
 
 ## Testing
 
 ### Running Tests
 
-Tests run automatically when executing the built binary:
+Executing the compiled binary automatically runs all included tests, validating core functionality and architecture support.
 
 ```powershell
 # Run x64 release build
@@ -434,7 +441,7 @@ The test suite validates:
 GitHub Actions automatically tests all configurations:
 - Builds: i386, x86_64, aarch64 (Windows)
 - Tests: i386 (WoW64), x86_64 (native), aarch64 (self-hosted ARM64 runner)
-- Validation: No .rdata dependencies, correct exit codes
+- Validation: Ensures no .rdata dependencies and verifies correct exit codes
 
 ## Binary Analysis
 
@@ -452,9 +459,9 @@ llvm-objdump -d build\windows\x86_64\release\output.exe | findstr "mov.*\$0x"
 ```
 
 **Expected Results:**
-- `.rdata`: Only ~32 bytes (compiler constants)
-- Strings: None of your embedded strings visible
-- Disassembly: Characters as immediate operands (`movw $0x57, (%rax)`)
+- `.rdata`: Only minimal compiler-generated constants (~32 bytes)
+- Strings: Fully embedded in code, no read-only storage
+- Disassembly: Characters encoded as immediate operands, e.g., movw $0x57, (%rax)
 
 ## Documentation
 
@@ -467,7 +474,7 @@ For more detailed information:
 
 ## Contributing
 
-This is a private research project. Code is provided for educational and authorized security research purposes only.
+This is a private research project intended for educational and authorized security research purposes only.
 
 ## License
 
@@ -475,14 +482,15 @@ Proprietary - All rights reserved
 
 ## Security Notice
 
-This runtime is designed for position-independent code (PIC) environments including shellcode and injection payloads. It should only be used for:
+This runtime is designed for position-independent code (PIC) environments, including use cases that require execution without fixed load addresses.
+It is intended exclusively for the following purposes:
 
 - Authorized security testing and penetration testing
-- Academic research and education
+- Academic research and educational use
 - Legitimate software development requiring PIC constraints
 - Defensive security research and analysis
 
-Unauthorized use for malicious purposes is strictly prohibited.
+⚠️ Any unauthorized or malicious use of this software is strictly prohibited.
 
 ---
 
