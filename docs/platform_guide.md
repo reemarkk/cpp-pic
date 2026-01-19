@@ -443,8 +443,8 @@ for (DWORD i = 0; i < numberOfNames; i++) {
 ### Memory Allocation Performance
 
 Direct `NtAllocateVirtualMemory` calls:
-- **Advantages**: Avoids heap fragmentation
-                  No heap metadata overhead
+- **Advantages**: - Avoids heap fragmentation
+                  - No heap metadata overhead
 - **Disadvantage**: Allocations are page-aligned (minimum 4 KB)
 - **Use case**: Best suited for larger memory allocations (greater than 4 KB)
 
